@@ -27,8 +27,7 @@ namespace Zombies
         private List<MapTile> tiles = new List<MapTile>();
         private MapTile newTile;
 
-        private int[] gridX;
-        private int[] gridY;
+        private Frempt.Grid gridMap;
 
         private bool tileDrawn = false;
 
@@ -38,6 +37,8 @@ namespace Zombies
 
             graphics.PreferredBackBufferWidth = 1280;
             graphics.PreferredBackBufferHeight = 1024;
+
+            this.IsMouseVisible = true;
 
             Content.RootDirectory = "Content";
         }
@@ -49,11 +50,11 @@ namespace Zombies
             screenWidth = GraphicsDevice.Viewport.Width;
             screenHeight = GraphicsDevice.Viewport.Height;
 
-            CalculateGrid(4, 4);
+            gridMap = new Frempt.Grid(5, 5, (int)screenWidth, (int)screenHeight);
 
             MapDeck.Shuffle();
             newTile = MapDeck.Draw();
-            newTile.MoveTo(GetClosestGridPoint((int)screenWidth / 2, (int)screenHeight / 2));
+            newTile.MoveTo(gridMap.GetClosestGridPoint((int)screenWidth / 2, (int)screenHeight / 2));
             tiles.Add(newTile);
             newTile = null;
 
@@ -72,72 +73,11 @@ namespace Zombies
         {
         }
 
-        protected void CalculateGrid(int portionsX, int portionsY)
-        {
-            int spacingX = (int)screenWidth / (portionsX - 1);
-            int spacingY = (int)screenHeight / (portionsY - 1);
-
-            gridX = new int[portionsX];
-            gridY = new int[portionsY];
-
-            for (int i = 0; i < gridX.Length; i++)
-            {
-                gridX[i] = (spacingX / 2) + (spacingX * i);
-            }
-            for (int i = 0; i < gridY.Length; i++)
-            {
-                gridY[i] = (spacingY / 2) + (spacingY * i);
-            }
-        }
-
-        protected Point GetClosestGridPoint(int posX, int posY)
-        {
-            Vector2 returnVal = new Vector2(5000, 5000);
-
-            for (int i = 0; i < gridX.Length; i++)
-            {
-                for (int j = 0; j < gridY.Length; j++)
-                {
-                    Vector2 vec = new Vector2((float)gridX[i], (float)gridY[j]);
-                    if(vec.Length() < returnVal.Length())
-                    {
-                        returnVal = vec;
-                    }
-                }
-            }
-
-            Point p = new Point((int)returnVal.X, (int)returnVal.Y);
-            return p;
-        }
-
-        protected Point GetClosestGridIndex(int posX, int posY)
-        {
-            Vector2 returnVal = new Vector2(5000, 5000);
-
-            Point p = new Point(0, 0);
-
-            for (int i = 0; i < gridX.Length; i++)
-            {
-                for (int j = 0; j < gridY.Length; j++)
-                {
-                    Vector2 vec = new Vector2((float)gridX[i], (float)gridY[j]);
-                    if (vec.Length() < returnVal.Length())
-                    {
-                        returnVal = vec;
-                        p = new Point(i, j);
-                    }
-
-                }
-            }
-
-            return p;
-        }
-
         protected MapTile GetTileAtGridPoint(int gridIndexX, int gridIndexY)
         {
             foreach (MapTile tile in tiles)
             {
-                if (tile.GetRect().X == gridX[gridIndexX] && tile.GetRect().Y == gridY[gridIndexY])
+                if (tile.GetRect().X == gridMap.GetGridPosX(gridIndexX) && tile.GetRect().Y == gridMap.GetGridPosY(gridIndexY))
                 {
                     return tile;
                 }
@@ -153,28 +93,40 @@ namespace Zombies
                 return false;
             }
 
-            MapTile left = GetTileAtGridPoint(gridIndexX - 1, gridIndexY);
-            if (left != null && (left.HasRightConnection() && !tile.HasLeftConnection()))
+            if (!gridMap.IsFirstX(gridIndexX))
             {
-                return false;
+                MapTile left = GetTileAtGridPoint(gridIndexX - 1, gridIndexY);
+                if (left != null && (left.HasRightConnection() && !tile.HasLeftConnection()))
+                {
+                    return false;
+                }
             }
 
-            MapTile right = GetTileAtGridPoint(gridIndexX + 1, gridIndexY);
-            if (right != null && (right.HasLeftConnection() && !tile.HasRightConnection()))
+            if(!gridMap.IsLastX(gridIndexX))
             {
-                return false;
+                MapTile right = GetTileAtGridPoint(gridIndexX + 1, gridIndexY);
+                if (right != null && (right.HasLeftConnection() && !tile.HasRightConnection()))
+                {
+                    return false;
+                }
             }
 
-            MapTile up = GetTileAtGridPoint(gridIndexX, gridIndexY - 1);
-            if (up != null && (up.HasDownConnection() && !tile.HasUpConnection()))
+            if (!gridMap.IsFirstY(gridIndexY))
             {
-                return false;
+                MapTile up = GetTileAtGridPoint(gridIndexX, gridIndexY - 1);
+                if (up != null && (up.HasDownConnection() && !tile.HasUpConnection()))
+                {
+                    return false;
+                }
             }
 
-            MapTile down = GetTileAtGridPoint(gridIndexX, gridIndexY + 1);
-            if (down != null && (down.HasUpConnection() && !tile.HasDownConnection()))
+            if (!gridMap.IsLastY(gridIndexY))
             {
-                return false;
+                MapTile down = GetTileAtGridPoint(gridIndexX, gridIndexY + 1);
+                if (down != null && (down.HasUpConnection() && !tile.HasDownConnection()))
+                {
+                    return false;
+                }
             }
 
             return true;
@@ -186,9 +138,9 @@ namespace Zombies
             {
                 MapTile lastState = tile;
 
-                for (int i = 0; i < gridX.Length; i++)
+                for (int i = 0; i < gridMap.GetPortionCountX(); i++)
                 {
-                    for (int j = 0; j < gridY.Length; j++)
+                    for (int j = 0; j < gridMap.GetPortionCountY(); j++)
                     {
                         if (IsLegalPlacement(i, j, tile))
                         {
@@ -243,28 +195,26 @@ namespace Zombies
                 case MovePhase.MAP:
                     if (!tileDrawn)
                     {
-                        MapTile nextTile = MapDeck.Peek();
-                        while (!CanBePlaced(nextTile) && newTile.GetName() != "Helipad")
-                        {
-                            newTile = MapDeck.Draw();
-                        }
+                        newTile = MapDeck.Draw();
+                        tileDrawn = true;
                     }
 
-                    newTile.MoveTo(GetClosestGridPoint(Mouse.GetState().X, Mouse.GetState().Y));
+                    newTile.MoveTo(gridMap.GetClosestGridPoint(Mouse.GetState().X, Mouse.GetState().Y));
 
                     if (Mouse.GetState().RightButton == ButtonState.Pressed && prevMouseState.RightButton == ButtonState.Released)
                     {
                         newTile.Rotate();
                     }
 
-                    Point gridIndices = GetClosestGridIndex(newTile.GetRect().X, newTile.GetRect().Y);
+                    Point gridIndices = gridMap.GetClosestGridIndex(newTile.GetRect().X, newTile.GetRect().Y);
                     bool isLegal = IsLegalPlacement(gridIndices.X, gridIndices.Y, newTile);
 
                     if (Mouse.GetState().LeftButton == ButtonState.Pressed && prevMouseState.LeftButton == ButtonState.Released)
                     {
-                        if (isLegal)
+                        if (isLegal && (CanBePlaced(MapDeck.Peek()) || MapDeck.Peek() == null || MapDeck.Peek().GetName() == "Helipad"))
                         {
                             movePhase = MovePhase.TOKENS;
+                            tileDrawn = false;
                             tiles.Add(newTile);
 
                             newTile = null;
@@ -286,9 +236,16 @@ namespace Zombies
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            Matrix matrix = Matrix.CreateScale(screenWidth / 1280);
+            //draw objects which aren't being scaled here
+            spriteBatch.Begin();
 
-            spriteBatch.Begin(SpriteSortMode.FrontToBack, null, null, null, null, null, matrix);
+            gridMap.DrawGrid(spriteBatch, 1.0f, Color.Black, GraphicsDevice);
+
+            spriteBatch.End();
+
+            Matrix matrix = Matrix.CreateScale(screenWidth / 1280, screenHeight / 1024, 1.0f);
+
+            spriteBatch.Begin(SpriteSortMode.BackToFront, null, null, null, null, null, matrix);
 
             foreach (MapTile tile in tiles)
             {

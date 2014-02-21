@@ -6,8 +6,7 @@
 
 	Description:	- Encapsulation of a basic textured sprite object. 
 	
-					- Adds a SpriteEffects object, which allows the image to be flipped. By default, when MoveBy(int, int) is called,
-                    - this will be updated to reflect movement direction (default is facing right).
+					- Adds a SpriteEffects object, which allows the image to be flipped. Some simple commented out code in MoveBy(int, int) is called, can flip the sprite to reflect movement direction.
 					
 					- This class should be extended by more specific classes.
  */
@@ -91,14 +90,14 @@ namespace Frempt
             Rectangle tempRect = new Rectangle(rect.Left + xMove, rect.Top + yMove, rect.Width, rect.Height);
             rect = tempRect;
 
-            if (xMove > 0)
+            /*if (xMove > 0)
             {
                 effects = SpriteEffects.None;
             }
             if (xMove < 0)
             {
                 effects = SpriteEffects.FlipHorizontally;
-            }
+            }*/
         }
 
         public void MoveTo(int x, int y)

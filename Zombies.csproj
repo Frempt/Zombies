@@ -108,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Frempt\AnimationLibrary.cs" />
+    <Compile Include="Frempt\Grid.cs" />
     <Compile Include="Frempt\Primitives.cs" />
     <Compile Include="Frempt\SoundLibrary.cs" />
     <Compile Include="Frempt\Sprite.cs" />

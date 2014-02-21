@@ -48,19 +48,29 @@ namespace Zombies
             helipadCons[2] = true;
             helipadCons[3] = true;
             helipad.Setup(helipadCons, 0, 0, 0);
-            tiles.Insert(rng.Next((tiles.Count/2) - 3, (tiles.Count/2) + 3), helipad);
+            tiles.Add(helipad);
+            //tiles.Insert(rng.Next((tiles.Count/2) - 3, (tiles.Count/2) + 3), helipad);
         }
 
         public static MapTile Draw()
         {
-            MapTile returnTile = tiles[0];
-            tiles.Remove(returnTile);
-            return returnTile;
+            if (tiles.Count > 0)
+            {
+                MapTile returnTile = tiles[0];
+                tiles.Remove(returnTile);
+                return returnTile;
+            }
+
+            return null;
         }
 
         public static MapTile Peek()
         {
-            return tiles[0];
+            if (tiles.Count > 0)
+            {
+                return tiles[0];
+            }
+            return null;
         }
     }
 }

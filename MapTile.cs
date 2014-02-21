@@ -37,7 +37,7 @@ namespace Zombies
 
         public void Rotate()
         {
-            rotation += 90.0f;
+            rotation += (90.0f*0.0174532925f);
 
             bool[] oldCon = connections;
             connections[0] = oldCon[1];
@@ -45,9 +45,9 @@ namespace Zombies
             connections[2] = oldCon[3];
             connections[3] = oldCon[0];
 
-            if (rotation > 360.0f)
+            if (rotation > Math.PI*2)
             {
-                rotation -= 360.0f;
+                rotation -= ((float)Math.PI*2);
             }
         }
 
@@ -89,6 +89,19 @@ namespace Zombies
         public string GetName()
         {
             return name;
+        }
+
+        new public void Draw(SpriteBatch sb)
+        {
+            //translate origin to the center of the object
+            Vector2 origin = new Vector2(rect.Width / 2, rect.Height / 2);
+            MoveBy(-rect.Width / 2, -rect.Height / 2);
+
+            sb.Draw(texture, rect, null, Color.White, rotation, origin, effects, 0.0f);
+
+
+            //translate back
+            MoveBy(rect.Width / 2, rect.Height / 2);
         }
     }
 }
