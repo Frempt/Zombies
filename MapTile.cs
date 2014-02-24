@@ -9,11 +9,13 @@ namespace Zombies
 {
     public class MapTile : Frempt.Sprite
     {
+        private Texture2D illegalTexture;
         private string name;
         private bool[] connections;
         private int numberOfZombies;
         private int numberOfBullets;
         private int numberOfLifeTokens;
+        private bool isLegal;
 
         public MapTile(Texture2D tex, string name)
         {
@@ -33,17 +35,26 @@ namespace Zombies
             numberOfBullets = bullets;
             numberOfZombies = zombies;
             numberOfLifeTokens = lives;
+
+            isLegal = false;
+
+            illegalTexture = Frempt.TextureLibrary.Illegal;
         }
 
         public void Rotate()
         {
             rotation += (90.0f*0.0174532925f);
 
-            bool[] oldCon = connections;
-            connections[0] = oldCon[1];
-            connections[1] = oldCon[2];
-            connections[2] = oldCon[3];
-            connections[3] = oldCon[0];
+            bool[] oldCon = new bool[4];
+            for (int i = 0; i < oldCon.Length; i++)
+            {
+                oldCon[i] = connections[i];
+            }
+
+            connections[0] = oldCon[3];
+            connections[1] = oldCon[0];
+            connections[2] = oldCon[1];
+            connections[3] = oldCon[2];
 
             if (rotation > Math.PI*2)
             {
@@ -91,17 +102,29 @@ namespace Zombies
             return name;
         }
 
-        new public void Draw(SpriteBatch sb)
+        public bool IsLegal()
+        {
+            return isLegal;
+        }
+
+        public void SetLegality(bool legal)
+        {
+            isLegal = legal;
+        }
+
+        public void Draw(SpriteBatch sb, SpriteFont font)
         {
             //translate origin to the center of the object
             Vector2 origin = new Vector2(rect.Width / 2, rect.Height / 2);
-            MoveBy(-rect.Width / 2, -rect.Height / 2);
+            MoveBy(rect.Width / 2, rect.Height / 2);
 
             sb.Draw(texture, rect, null, Color.White, rotation, origin, effects, 0.0f);
-
+            if (!isLegal) sb.Draw(illegalTexture, rect, null, Color.White * 0.5f, rotation, origin, effects, 0.0f);
 
             //translate back
-            MoveBy(rect.Width / 2, rect.Height / 2);
+            MoveBy(-rect.Width / 2, -rect.Height / 2);
+
+            sb.DrawString(font, "Tile = " + name, new Vector2(rect.X + rect.Width / 10, rect.Y + rect.Height / 10), Color.Black);
         }
     }
 }

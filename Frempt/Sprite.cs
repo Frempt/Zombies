@@ -114,7 +114,14 @@ namespace Frempt
 
         public void Draw(SpriteBatch sb)
         {
-            sb.Draw(texture, rect, null, Color.White, rotation, Vector2.Zero, effects, 0.0f);
+            //translate origin to the center of the object
+            Vector2 origin = new Vector2(rect.Width / 2, rect.Height / 2);
+            MoveBy(rect.Width / 2, rect.Height / 2);
+
+            sb.Draw(texture, rect, null, Color.White, rotation, origin, effects, 0.0f);
+
+            //translate back
+            MoveBy(-rect.Width / 2, -rect.Height / 2);
         }
     }
 }

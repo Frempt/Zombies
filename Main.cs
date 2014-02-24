@@ -19,6 +19,7 @@ namespace Zombies
 
         private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
+        private SpriteFont font;
         private MouseState prevMouseState;
 
         public enum MovePhase { MAP = 0, TOKENS = 1, COMBAT = 2, DRAWCARDS = 3, MOVEPLAYER = 4, MOVEZOMBIES = 5, DISCARD = 6 };
@@ -50,11 +51,12 @@ namespace Zombies
             screenWidth = GraphicsDevice.Viewport.Width;
             screenHeight = GraphicsDevice.Viewport.Height;
 
-            gridMap = new Frempt.Grid(5, 5, (int)screenWidth, (int)screenHeight);
+            gridMap = new Frempt.Grid(new Point(0, 0), 5, 5, 1000, 1000);
 
             MapDeck.Shuffle();
             newTile = MapDeck.Draw();
-            newTile.MoveTo(gridMap.GetClosestGridPoint((int)screenWidth / 2, (int)screenHeight / 2));
+            newTile.MoveTo(gridMap.GetClosestGridPoint(gridMap.GetWidth() / 2, gridMap.GetWidth() / 2));
+            newTile.SetLegality(true);
             tiles.Add(newTile);
             newTile = null;
 
@@ -67,6 +69,8 @@ namespace Zombies
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             Frempt.TextureLibrary.LoadTextures(Content);
+
+            font = Content.Load<SpriteFont>("font");
         }
 
         protected override void UnloadContent()
@@ -96,7 +100,7 @@ namespace Zombies
             if (!gridMap.IsFirstX(gridIndexX))
             {
                 MapTile left = GetTileAtGridPoint(gridIndexX - 1, gridIndexY);
-                if (left != null && (left.HasRightConnection() && !tile.HasLeftConnection()))
+                if (left != null && ((left.HasRightConnection() && !tile.HasLeftConnection()) || (!left.HasRightConnection() && tile.HasLeftConnection())))
                 {
                     return false;
                 }
@@ -105,7 +109,7 @@ namespace Zombies
             if(!gridMap.IsLastX(gridIndexX))
             {
                 MapTile right = GetTileAtGridPoint(gridIndexX + 1, gridIndexY);
-                if (right != null && (right.HasLeftConnection() && !tile.HasRightConnection()))
+                if (right != null && ((right.HasLeftConnection() && !tile.HasRightConnection()) || (right.HasRightConnection() && !tile.HasLeftConnection())))
                 {
                     return false;
                 }
@@ -114,7 +118,7 @@ namespace Zombies
             if (!gridMap.IsFirstY(gridIndexY))
             {
                 MapTile up = GetTileAtGridPoint(gridIndexX, gridIndexY - 1);
-                if (up != null && (up.HasDownConnection() && !tile.HasUpConnection()))
+                if (up != null && ((up.HasDownConnection() && !tile.HasUpConnection()) || (!up.HasDownConnection() && tile.HasUpConnection())))
                 {
                     return false;
                 }
@@ -123,7 +127,7 @@ namespace Zombies
             if (!gridMap.IsLastY(gridIndexY))
             {
                 MapTile down = GetTileAtGridPoint(gridIndexX, gridIndexY + 1);
-                if (down != null && (down.HasUpConnection() && !tile.HasDownConnection()))
+                if (down != null && ((down.HasUpConnection() && !tile.HasDownConnection()) || (!down.HasUpConnection() && tile.HasDownConnection())))
                 {
                     return false;
                 }
@@ -136,15 +140,12 @@ namespace Zombies
         {
             if (tile != null)
             {
-                MapTile lastState = tile;
-
                 for (int i = 0; i < gridMap.GetPortionCountX(); i++)
                 {
                     for (int j = 0; j < gridMap.GetPortionCountY(); j++)
                     {
                         if (IsLegalPlacement(i, j, tile))
                         {
-                            newTile = lastState;
                             return true;
                         }
 
@@ -152,7 +153,6 @@ namespace Zombies
 
                         if (IsLegalPlacement(i, j, tile))
                         {
-                            newTile = lastState;
                             return true;
                         }
 
@@ -160,7 +160,6 @@ namespace Zombies
 
                         if (IsLegalPlacement(i, j, tile))
                         {
-                            newTile = lastState;
                             return true;
                         }
 
@@ -168,13 +167,10 @@ namespace Zombies
 
                         if (IsLegalPlacement(i, j, tile))
                         {
-                            newTile = lastState;
                             return true;
                         }
                     }
                 }
-
-                newTile = lastState;
             }
 
             return false;
@@ -207,11 +203,16 @@ namespace Zombies
                     }
 
                     Point gridIndices = gridMap.GetClosestGridIndex(newTile.GetRect().X, newTile.GetRect().Y);
-                    bool isLegal = IsLegalPlacement(gridIndices.X, gridIndices.Y, newTile);
+                    bool isLegal = false;
+                    //if (!isLegal) isLegal = MapDeck.Peek() == null;
+                    //if(!isLegal) isLegal = (CanBePlaced(MapDeck.Peek()) || newTile.GetName() == "Helipad");
+                    isLegal = IsLegalPlacement(gridIndices.X, gridIndices.Y, newTile);
+
+                    newTile.SetLegality(isLegal);
 
                     if (Mouse.GetState().LeftButton == ButtonState.Pressed && prevMouseState.LeftButton == ButtonState.Released)
                     {
-                        if (isLegal && (CanBePlaced(MapDeck.Peek()) || MapDeck.Peek() == null || MapDeck.Peek().GetName() == "Helipad"))
+                        if (isLegal)
                         {
                             movePhase = MovePhase.TOKENS;
                             tileDrawn = false;
@@ -224,6 +225,7 @@ namespace Zombies
                     break;
 
                 case MovePhase.TOKENS:
+                    movePhase = MovePhase.MAP;
                     break;
             }
 
@@ -239,23 +241,24 @@ namespace Zombies
             //draw objects which aren't being scaled here
             spriteBatch.Begin();
 
-            gridMap.DrawGrid(spriteBatch, 1.0f, Color.Black, GraphicsDevice);
+            gridMap.DrawGrid(spriteBatch, 1.5f, Color.Black, GraphicsDevice);
 
             spriteBatch.End();
 
             Matrix matrix = Matrix.CreateScale(screenWidth / 1280, screenHeight / 1024, 1.0f);
 
-            spriteBatch.Begin(SpriteSortMode.BackToFront, null, null, null, null, null, matrix);
-
+            spriteBatch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, matrix);
             foreach (MapTile tile in tiles)
             {
-                tile.Draw(spriteBatch);
+                tile.Draw(spriteBatch, font);
             }
 
             if (newTile != null)
             {
-                newTile.Draw(spriteBatch);
+                newTile.Draw(spriteBatch, font);
             }
+
+            spriteBatch.DrawString(font, "Phase = " + movePhase, new Vector2(screenWidth - screenWidth / 5, screenHeight / 20), Color.Black);
 
             spriteBatch.End();
 

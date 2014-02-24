@@ -28,7 +28,7 @@ namespace Frempt
         int sizeX;
         int sizeY;
 
-        public Grid(int portionsX, int portionsY, int gridWidth, int gridHeight)
+        public Grid(Point position, int portionsX, int portionsY, int gridWidth, int gridHeight)
         {
             sizeX = gridWidth;
             sizeY = gridHeight;
@@ -41,11 +41,11 @@ namespace Frempt
 
             for (int i = 0; i < gridX.Length; i++)
             {
-                gridX[i] = (spacingX * i);
+                gridX[i] = position.X + (spacingX * i);
             }
             for (int i = 0; i < gridY.Length; i++)
             {
-                gridY[i] = (spacingY * i);
+                gridY[i] = position.Y + (spacingY * i);
             }
         }
 
